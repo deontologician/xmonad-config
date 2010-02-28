@@ -223,6 +223,9 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
      
     -- launch a Thunar
     , ((modm .|. shiftMask, xK_t     ), spawnHere sp "thunar")
+    
+    -- launch Ario
+    , ((modm .|. shiftMask, xK_a     ), spawnHere sp "ario")
 
     -- XF86AudioMute
     , ((0 , xF86XK_AudioMute), spawn "amixer -q set Master toggle")
