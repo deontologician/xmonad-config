@@ -30,7 +30,7 @@ import Graphics.X11.ExtraTypes.XF86
 import System.IO
 import XMonad.Hooks.SetWMName
 import XMonad.Actions.SpawnOn
-import XMonad.Hooks.UrgencyHook
+--import XMonad.Hooks.UrgencyHook
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
@@ -81,8 +81,9 @@ myNumlockMask   = mod2Mask
 --
 -- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
 --
-greeks = ["α","β","δ","ζ","λ","μ","π","Σ","Ω"]
-myWorkspaces = greeks ++ map show [(length greeks) .. (length greeks + 10)]
+--greeks = ["α","β","δ","ζ","λ","μ","π","Σ","Ω"]
+--myWorkspaces = greeks ++ map show [(length greeks) .. (length greeks + 10)]
+myWorkspaces = map show [1 .. 19]
 -- myWorkspaces = map show [1..]
 
 -- Border colors for unfocused and focused windows, respectively.
@@ -156,8 +157,8 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Deincrement the number of windows in the master area
     , ((modm              , xK_period), sendMessage (IncMasterN (-1)))
 
-    -- Add a line to the todo file
-    , ((modm  .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "/home/habitue/random.txt")
+    -- Add a line when I want to remember a song name
+    , ((modm  .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "/home/habitue/songs.txt")
     
     -- Add a line to the changelog with the current date
     , ((modm, xK_c), appendFilePrompt defaultXPConfig "/home/habitue/changelog")
@@ -222,7 +223,7 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask, xK_g), spawnHere sp "chromium-browser --enable-plugins")
      
     -- launch a Thunar
-    , ((modm .|. shiftMask, xK_t     ), spawnHere sp "thunar")
+    , ((modm .|. shiftMask, xK_t     ), spawnHere sp "emelfm2")
     
     -- launch Ario
     , ((modm .|. shiftMask, xK_a     ), spawnHere sp "ario")
@@ -363,7 +364,7 @@ myEventHook = mempty
 --
 myLogHook procname = do
   dynamicLogWithPP xmobarPP { ppOutput = hPutStrLn procname
-                            , ppTitle  = xmobarColor "green" "" . shorten 50
+                            , ppTitle  = const "" -- xmobarColor "green" "" . shorten 50
                             }
   updatePointer $ Relative 0.5 0.5
 ------------------------------------------------------------------------
@@ -386,8 +387,8 @@ main :: IO ()
 main = do
     xmproc <- spawnPipe "xmobar"
     sp <- mkSpawner
-    xmonad $ withUrgencyHook 
-           dzenUrgencyHook { args = ["-bg", "darkgreen", "-xs", "1"] } 
+    xmonad {- $ withUrgencyHook 
+            dzenUrgencyHook { args = ["-bg", "darkgreen", "-xs", "1"] } -}
      $ defaultConfig {
       -- simple stuff
       terminal           = myTerminal,
