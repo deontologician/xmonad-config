@@ -12,7 +12,7 @@ import Data.Monoid
 import System.Exit
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
-import XMonad.Util.Run(spawnPipe)
+import XMonad.Util.Run
 import XMonad.Layout.Tabbed
 import XMonad.Layout.Spiral
 import XMonad.Layout.IM
@@ -22,7 +22,6 @@ import XMonad.Hooks.ManageHelpers
 import XMonad.Actions.CycleWS
 import XMonad.Prompt
 import XMonad.Prompt.AppendFile
-import XMonad.Prompt.Shell
 import qualified XMonad.Actions.FlexibleResize as Flex
 import XMonad.Layout.NoBorders
 import XMonad.Actions.WindowBringer
@@ -30,7 +29,10 @@ import Graphics.X11.ExtraTypes.XF86
 import System.IO
 import XMonad.Hooks.SetWMName
 import XMonad.Actions.SpawnOn
---import XMonad.Hooks.UrgencyHook
+import XMonad.Actions.DynamicWorkspaces
+import XMonad.Actions.CopyWindow
+import XMonad.Hooks.UrgencyHook
+import XMonad.Util.WorkspaceCompare
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
@@ -83,7 +85,7 @@ myNumlockMask   = mod2Mask
 --
 --greeks = ["α","β","δ","ζ","λ","μ","π","Σ","Ω"]
 --myWorkspaces = greeks ++ map show [(length greeks) .. (length greeks + 10)]
-myWorkspaces = map show [1 .. 19]
+myWorkspaces = ["Home"]
 -- myWorkspaces = map show [1..]
 
 -- Border colors for unfocused and focused windows, respectively.
@@ -109,8 +111,10 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- launch Xmonad shellprompt
     , ((modm,               xK_p     ), shellPromptHere sp defaultXPConfig)
 
-    -- close focused window
-    , ((modm .|. shiftMask, xK_c     ), kill)
+    -- close focused window on this workspace (kill if not on any other workspace)
+    , ((modm .|. shiftMask, xK_c     ), kill1)
+    -- kill focused window on all workspaces
+    , ((modm .|. controlMask, xK_c   ), kill)
 
      -- Rotate through the available layout algorithms
     , ((modm,               xK_space ), sendMessage NextLayout)
@@ -131,7 +135,7 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm,               xK_k     ), windows W.focusUp  )
 
     -- Move focus to the master window
-    , ((modm,               xK_m     ), windows W.focusMaster  )
+    --, ((modm,               xK_m     ), windows W.focusMaster  )
 
     -- Swap the focused window and the master window
     , ((modm,               xK_Return), windows W.swapMaster)
@@ -151,6 +155,21 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Push window back into tiling
     , ((modm,               xK_t     ), withFocused $ windows . W.sink)
 
+    -- Dynamic Workspace keybindings
+    -- Delete current workspace (and move windows to some other workspace)
+    , ((modm              , xK_d      ), removeWorkspace)
+    -- Select or create a new workspace from an autocomplete list
+    , ((modm .|. shiftMask, xK_v      ), selectWorkspace defaultXPConfig)
+    -- Move the currently selected window to another workspace
+    , ((modm              , xK_m      ), withWorkspace defaultXPConfig 
+                                           (windows . W.shift))
+    -- Copy the currently selected window to another workspace
+    , ((modm .|. controlMask, xK_m      ), withWorkspace defaultXPConfig 
+                                             (windows . copy))
+    -- rename the current workspace
+    , ((modm .|. controlMask, xK_r      ), renameWorkspace defaultXPConfig)
+    -- Toggle back to the previous workspace
+    , ((modm              , xK_0      ), toggleWS )
     -- Increment the number of windows in the master area
     , ((modm              , xK_comma ), sendMessage (IncMasterN 1))
 
@@ -178,8 +197,12 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Move focused to previous window and move there as well
     , ((controlMask , xF86XK_Back), shiftToPrev >> prevWS)
 
-    -- Move to next empty window
-    , ((modm , xF86XK_Forward), moveTo Next EmptyWS)
+    -- Create a new workspace with a random name and move to it
+    , ((modm , xF86XK_Forward), do
+         newname <- liftIO $ runProcessWithInput "randomword" [] ""
+         addWorkspace $ init newname 
+         moveTo Next EmptyWS
+      )
     -- Move to previous empty window
     , ((modm , xF86XK_Back), moveTo Prev EmptyWS)
 
@@ -269,7 +292,6 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- Restart xmonad
     , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
     ]
-    ++
 
     --
     -- mod-[1..9], Switch to workspace N
@@ -277,9 +299,14 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- mod-[1..9], Switch to workspace N
     -- mod-shift-[1..9], Move client to workspace N
     --
-    [((m .|. modm, k), windows $ f i)
+    {-[((m .|. modm, k), windows $ f i)
         | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
         , (f, m) <- [((W.greedyView), 0), (W.shift, shiftMask)]]
+     -}
+    ++
+    zip (zip (repeat modm) [xK_1..xK_9]) (map (withNthWorkspace W.greedyView) [0..])
+    ++
+    zip (zip (repeat (modm .|. shiftMask)) [xK_1..xK_9]) (map (withNthWorkspace W.shift) [0.. ])
     ++
 
     --
@@ -293,7 +320,7 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
---
+--"Ω"]
 myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- mod-button1, Set the window to floating mode and move by dragging
@@ -364,7 +391,8 @@ myEventHook = mempty
 --
 myLogHook procname = do
   dynamicLogWithPP xmobarPP { ppOutput = hPutStrLn procname
-                            , ppTitle  = const "" -- xmobarColor "green" "" . shorten 50
+                            , ppTitle  = xmobarColor "OrangeRed" "" . shorten 50
+                            , ppSep    = "  |> "
                             }
   updatePointer $ Relative 0.5 0.5
 ------------------------------------------------------------------------
@@ -387,8 +415,7 @@ main :: IO ()
 main = do
     xmproc <- spawnPipe "xmobar"
     sp <- mkSpawner
-    xmonad {- $ withUrgencyHook 
-            dzenUrgencyHook { args = ["-bg", "darkgreen", "-xs", "1"] } -}
+    xmonad 
      $ defaultConfig {
       -- simple stuff
       terminal           = myTerminal,
