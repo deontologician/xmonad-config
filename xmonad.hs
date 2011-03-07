@@ -243,7 +243,7 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask, xK_f), spawnHere sp "firefox")
 
     -- Launch Chromium
-    , ((modm .|. shiftMask, xK_g), spawnHere sp "chromium-beta")
+    , ((modm .|. shiftMask, xK_g), spawnHere sp "chromium")
      
     -- launch a Thunar
     , ((modm .|. shiftMask, xK_t     ), spawnHere sp "emelfm2")
