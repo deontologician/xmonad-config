@@ -227,10 +227,10 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((0 , xF86XK_ScreenSaver), spawn "xscreensaver-command -lock")
 
     -- Put computer to sleep
-    , ((0, xF86XK_Sleep), spawn "fish -c 'suspend'")
+    , ((0, xF86XK_Sleep), spawn "suspend")
 
     -- Hibernate
-    , ((0, xF86XK_Battery), spawn "fish -c 'hibernate'")
+    , ((0, xF86XK_Battery), spawn "hibernate")
 
     -- Take a screenshot of a specific window
     , ((controlMask       , xK_Print), spawn "sleep 0.2; scrot -s")
