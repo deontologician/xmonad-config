@@ -26,9 +26,7 @@ import XMonad.Prompt
 import XMonad.Prompt.AppendFile
 import qualified XMonad.Actions.FlexibleResize as Flex
 import XMonad.Layout.NoBorders
-import XMonad.Actions.WindowBringer
 import Graphics.X11.ExtraTypes.XF86
-import System.IO
 import XMonad.Hooks.SetWMName
 import XMonad.Actions.SpawnOn
 import XMonad.Actions.DynamicWorkspaces
@@ -61,21 +59,6 @@ myBorderWidth   = 1
 --
 myModMask       = mod4Mask
 
--- The mask for the numlock key. Numlock status is "masked" from the
--- current modifier status, so the keybindings will work with numlock on or
--- off. You may need to change this on some systems.
---
--- You can find the numlock modifier by running "xmodmap" and looking for a
--- modifier with Num_Lock bound to it:
---
--- > $ xmodmap | grep Num
--- > mod2        Num_Lock (0x4d)
---
--- Set numlockMask = 0 if you don't have a numlock key, or want to treat
--- numlock status separately.
---
-myNumlockMask   = mod2Mask
-
 -- The default number of workspaces (virtual screens) and their names.
 -- By default we use numeric strings, but any string may be used as a
 -- workspace name. The number of workspaces is determined by the length
@@ -101,17 +84,30 @@ randomWallpaper = spawn "feh --bg-scale `ls ~/Wallpapers/* | sort -R | head -1`"
 xF86XK_Battery :: KeySym
 xF86XK_Battery = 269025171
 
+gripeFile :: String
+gripeFile = "/home/habitue/gripes"
+
+changeLog :: String
+changeLog = "/home/habitue/changelog"
+
+-- Get a string version of the current timestamp
+getTimeStamp :: MonadIO m => m String
+getTimeStamp = do 
+  tz <- liftIO getCurrentTimeZone
+  time <- liftIO getCurrentTime
+  return . formatTime defaultTimeLocale "%m/%-e/%Y %I:%M%p" . utcToLocalTime tz $ time
+
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
 --
-myKeys :: Spawner -> XConfig Layout -> M.Map (KeyMask, KeySym) (X ())
-myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
+myKeys :: XConfig Layout -> M.Map (KeyMask, KeySym) (X ())
+myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- launch a terminal
-    [ ((modm .|. shiftMask, xK_Return), spawnHere sp $ XMonad.terminal conf)
+    [ ((modm .|. shiftMask, xK_Return), spawnHere $ XMonad.terminal conf)
 
     -- launch Xmonad shellprompt
-    , ((modm,               xK_p     ), shellPromptHere sp defaultXPConfig)
+    , ((modm,               xK_p     ), shellPromptHere defaultXPConfig)
 
     -- close focused window on this workspace (kill if not on any other workspace)
     , ((modm .|. shiftMask, xK_c     ), kill1)
@@ -246,19 +242,19 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm              , xK_y), randomWallpaper)
 
     -- Launch emacs frame (will fail silently if emacs daemon is not running)
-    , ((modm .|. shiftMask, xK_m), spawnHere sp "emacsclient -nc")
+    , ((modm .|. shiftMask, xK_m), spawnHere "emacsclient -nc")
 
     -- Launch firefox
-    , ((modm .|. shiftMask, xK_f), spawnHere sp "firefox")
+    , ((modm .|. shiftMask, xK_f), spawnHere "firefox")
 
     -- Launch Chromium
-    , ((modm .|. shiftMask, xK_g), spawnHere sp "chromium")
+    , ((modm .|. shiftMask, xK_g), spawnHere "chromium")
      
     -- launch a Thunar
-    , ((modm .|. shiftMask, xK_t     ), spawnHere sp "emelfm2")
+    , ((modm .|. shiftMask, xK_t     ), spawnHere "emelfm2")
     
     -- launch Ario
-    , ((modm .|. shiftMask, xK_a     ), spawnHere sp "ario")
+    , ((modm .|. shiftMask, xK_a     ), spawnHere "ario")
 
     -- XF86AudioMute
     , ((0 , xF86XK_AudioMute), spawn "amixer -q set Master toggle")
@@ -374,8 +370,9 @@ myLayout = avoidStruts $ noBorders $ layoutHook defaultConfig ||| simpleTabbed
 -- To match on the WM_NAME, you can use 'title' in the same way that
 -- 'className' and 'resource' are used below.
 --
-myManageHook sp = manageSpawn sp <+> manageDocks <+> manageHook defaultConfig 
-               <+> doF W.swapDown <+> composeOne [isFullscreen -?> doFullFloat ]
+myManageHook = manageSpawn <+> manageDocks <+> manageHook defaultConfig 
+               <+> doF W.swapDown <+> composeOne [isFullscreen -?> doFullFloat]
+                                                 --, className =? "stalonetray" --> doIgnore ]
 
 ------------------------------------------------------------------------
 -- Event handling
@@ -423,7 +420,6 @@ myStartupHook = setWMName "LG3D"
 main :: IO ()
 main = do
     xmproc <- spawnPipe "xmobar"
-    sp <- mkSpawner
     xmonad 
      $ defaultConfig {
       -- simple stuff
@@ -431,18 +427,17 @@ main = do
       focusFollowsMouse  = myFocusFollowsMouse,
       borderWidth        = myBorderWidth,
       modMask            = myModMask,
-      numlockMask        = myNumlockMask,
       workspaces         = myWorkspaces,
       normalBorderColor  = myNormalBorderColor,
       focusedBorderColor = myFocusedBorderColor,
 
       -- key bindings
-      keys               = myKeys sp,
+      keys               = myKeys,
       mouseBindings      = myMouseBindings,
 
       -- hooks, layouts
       layoutHook         = myLayout,
-      manageHook         = myManageHook sp,
+      manageHook         = myManageHook,
       handleEventHook    = myEventHook,
       logHook            = myLogHook xmproc,
       startupHook        = myStartupHook
