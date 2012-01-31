@@ -263,9 +263,11 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     -- XF86AudioRaiseVolume
     , ((0 , xF86XK_AudioRaiseVolume), spawn "amixer -q set Master 1+ unmute")
     -- XF86AudioPlay (toggles play/pause)
-    , ((0 , xF86XK_AudioPlay), spawn "mpc toggle")
+    , ((0 , xF86XK_AudioPlay), spawn "playorparty")
     -- XF86AudioNext
     , ((0 , xF86XK_AudioNext), spawn "mpc next")
+    -- Random next
+    , ((controlMask , xF86XK_AudioNext), spawn "playrand")
     -- XF86AudioPrev
     , ((0 , xF86XK_AudioPrev), spawn "mpc prev")
     -- XF86AudioStop
