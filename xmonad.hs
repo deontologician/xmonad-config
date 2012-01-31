@@ -9,6 +9,8 @@
 
 import XMonad
 import Data.Monoid
+import Data.Time
+import System.Locale
 import System.Exit
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
@@ -178,9 +180,16 @@ myKeys sp conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- Add a line when I want to remember a song name
     , ((modm  .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "/home/habitue/songs.txt")
-    
+
+    -- Add a line when I have a new system gripe with the current timestamp
+    , ((modm, xK_g), do
+         ts <- (++ ": ") `fmap` getTimeStamp  
+         appendFilePrompt defaultXPConfig{defaultText = ts} gripeFile)
+
     -- Add a line to the changelog with the current date
-    , ((modm, xK_c), appendFilePrompt defaultXPConfig "/home/habitue/changelog")
+    , ((modm, xK_c), do 
+         ts <- (++ ": ") `fmap` getTimeStamp  -- get the timestamp
+         appendFilePrompt defaultXPConfig{defaultText = ts} changeLog )
 
     -- Move to next nonempty window
     , ((0 , xF86XK_Forward), moveTo Next NonEmptyWS)
